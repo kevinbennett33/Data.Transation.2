@@ -47,6 +47,7 @@ result <- Translation.data %>%
 # View the result
 print(result)
 
+
 ```
 
 ```{r}
@@ -74,10 +75,11 @@ result <- Translation.data %>%
     employed.publicadmin = sum(IND >= 9370 & IND <= 9590),
     employed.military = sum(IND >= 9670 & IND <= 9870),
     employed.unemployed = sum(IND >= 9920),
-    total.employed = n(),
+    total.employed = n()) %>%
+mutate(
     percentage.retail = employed.retail / total.employed * 100,
     percentage.agriculture = employed.agriculture / total.employed * 100,
-    percentage.mining = employed.mining / total_employed * 100,
+    percentage.mining = employed.mining / total.employed * 100,
     percentage.construction = employed.construction / total.employed * 100,
     percentage.manufacturing = employed.manufacturing / total.employed * 100,
     percentage.finance.insurance = employed.finance.insurance / total.employed * 100,
@@ -97,8 +99,6 @@ result <- Translation.data %>%
 
 # Print the result
 print(result)
-
-
 ```
 
 ```{r}
