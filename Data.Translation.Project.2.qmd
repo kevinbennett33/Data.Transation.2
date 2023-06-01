@@ -15,33 +15,89 @@ library(fixest)
 
 ```{r}
 # Load Data
-install.packages("ipumsr")
 library(ipumsr)
 ddi <- read_ipums_ddi("cps_00002.xml")
 Translation.data <- read_ipums_micro(ddi)
 vtable(Translation.data)
+
+# Show only rows from 2015 and beyond 
+Translation.data$YEAR <- as.numeric(Translation.data$YEAR)
+
+Translation.data <- Translation.data[Translation.data$YEAR >= 2015, ]
+print(Translation.data)
 ```
 
+# 1) How has COVID affected the health of the retail Industry, as measured by employment?
+
 ```{r}
-# Divide the number of people whos IND code is between 4760-5790 by the number of people who's EMPSTAT = 10, by month, and create a new column for this output. 
+# Retail as a percentage of total employed people: Divide the number of people whos IND code is between 4760-5790 by the number of people who's EMPSTAT = 10, by month, and create a new data frame with this outputs
+# Assuming your dataset is named 'Translation.data' and has the columns YEAR, MONTH, IND, and EMPSTAT
 
-# Filter the dataset
-filtered_data <- Translation.data %>%
-  filter(IND >= 4760 & IND <= 5790, EMPSTAT == 10)
-
-# Group and summarize the filtered data
-result <- filtered_data %>%
+result <- Translation.data %>%
+  filter(IND >= 4760 & IND <= 5790, EMPSTAT == 10) %>%
   group_by(YEAR, MONTH) %>%
-  summarize(employed_in_range = n()) %>%
+  summarize(employed.retail = n()) %>%
   ungroup() %>%
-  mutate(total_employed = Translation.data %>%
+  mutate(total.employed = Translation.data %>%
            filter(EMPSTAT == 10) %>%
            count(YEAR, MONTH) %>%
            pull(n),
-         percentage = employed_in_range / total_employed * 100)
+         percentage = employed.retail / total.employed * 100)
 
 # View the result
 print(result)
+
+```
+
+```{r}
+# All industries as a percentage of total employed people. 
+
+result <- Translation.data %>%
+  filter(EMPSTAT == 10) %>%
+  group_by(YEAR, MONTH) %>%
+  summarize(
+    employed.retail = sum(IND >= 4760 & IND <= 5790),
+    employed.agriculture = sum(IND >= 0170 & IND <= 0290),
+    employed.mining = sum(IND >= 0370 & IND <= 0490),
+    employed.construction = sum(IND >= 0370 & IND <= 0490),
+    employed.manufacturing = sum(IND >= 1070 & IND <= 3990),
+    employed.finance.insurance = sum(IND >= 6870 & IND <= 6992),
+    employed.RE.rental = sum(IND >= 7071 & IND <= 7490),
+    employed.science.technical.professional = sum(IND >= 7270 & IND <= 7490),
+    employed.management = sum(IND >= 7570),
+    employed.admin.waste = sum(IND >= 7580 & IND <= 7790),
+    employed.education = sum(IND >= 7860 & IND <= 7890),
+    employed.health.social = sum(IND >= 7970 & IND <= 8470),
+    employed.entertainment = sum(IND >= 8561 & IND <= 8590),
+    employed.foodserve = sum(IND >= 8660 & IND <= 8690),
+    employed.other = sum(IND >= 8770 & IND <= 9290),
+    employed.publicadmin = sum(IND >= 9370 & IND <= 9590),
+    employed.military = sum(IND >= 9670 & IND <= 9870),
+    employed.unemployed = sum(IND >= 9920),
+    total.employed = n(),
+    percentage.retail = employed.retail / total.employed * 100,
+    percentage.agriculture = employed.agriculture / total.employed * 100,
+    percentage.mining = employed.mining / total_employed * 100,
+    percentage.construction = employed.construction / total.employed * 100,
+    percentage.manufacturing = employed.manufacturing / total.employed * 100,
+    percentage.finance.insurance = employed.finance.insurance / total.employed * 100,
+    percentage.RE.rental = employed.RE.rental / total.employed * 100,
+    percentage.science.technical.professional = employed.science.technical.professional / total.employed * 100,
+    percentage.management = employed.management / total.employed * 100,
+    percentage.admin.waste = employed.admin.waste / total.employed * 100,
+    percentage.education = employed.education / total.employed * 100,
+    percentage.health.social = employed.health.social/ total.employed * 100,
+    percentage.entertainment = employed.entertainment / total.employed * 100,
+    percentage.foodserve = employed.foodserve / total.employed * 100,
+    percentage.other = employed.other / total.employed * 100,
+    percentage.publicadmin =employed.publicadmin / total.employed * 100,
+    percentage.military = employed.military / total.employed * 100,
+    percentage.unemployed = employed.unemployed / total.employed * 100
+    )
+
+# Print the result
+print(result)
+
 
 ```
 
