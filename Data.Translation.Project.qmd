@@ -1,0 +1,28 @@
+---
+title: "Data Translation Project"
+format: html
+editor: visual
+---
+
+```{r}
+# Load Necessary Packages
+library(lubridate)
+library(stringr)
+library(tidyverse)
+library(vtable)
+library(fixest)
+```
+
+```{r}
+# Load Data
+install.packages("ipumsr")
+library(ipumsr)
+ddi <- read_ipums_ddi("cps_00002.xml")
+Translation.data <- read_ipums_micro(ddi)
+vtable(Translation.data)
+```
+
+```{r}
+# Mutate Data and add Column for Employment share by industry, per month, and a Cutoff Variable at 3.11.20
+
+```
