@@ -102,6 +102,7 @@ print(result)
 ```
 
 ```{r}
-# Mutate Data and add Column for Employment share by industry, per month, and a Cutoff Variable at 3.11.20
+# Mutate Data: add a Cutoff Variable at 3.11.20 to indicate the WHO recognition of COVId as a global pandemic.
+
 
 ```
