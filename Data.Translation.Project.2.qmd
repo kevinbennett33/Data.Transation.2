@@ -11,98 +11,130 @@ library(stringr)
 library(tidyverse)
 library(vtable)
 library(fixest)
+library(readr)
+library(dplyr)
+library(rio)
+library(ipumsr)
 ```
 
 ```{r}
 # Load Data
-library(ipumsr)
 ddi <- read_ipums_ddi("cps_00002.xml")
 Translation.data <- read_ipums_micro(ddi)
-vtable(Translation.data)
 
 # Show only rows from 2015 and beyond 
 Translation.data$YEAR <- as.numeric(Translation.data$YEAR)
 
 Translation.data <- Translation.data[Translation.data$YEAR >= 2015, ]
-print(Translation.data)
+
+# Filter out ASECFLAG data, so that data is cleaner. 
+Translation.data <- Translation.data %>% filter(is.na(ASECFLAG))
+
+# Filter data so that only rows where EMPSTAT is equal to 10 (employed) or 21 (unemployed) are included. 
+Translation.data <- Translation.data %>% filter(EMPSTAT %in% c(10, 21))
 ```
 
 # 1) How has COVID affected the health of the retail Industry, as measured by employment?
 
 ```{r}
-# Retail as a percentage of total employed people: Divide the number of people whos IND code is between 4760-5790 by the number of people who's EMPSTAT = 10, by month, and create a new data frame with this outputs
-# Assuming your dataset is named 'Translation.data' and has the columns YEAR, MONTH, IND, and EMPSTAT
+# Join indnames.csv and the Translation.data df
+# Read in indnames.csv
+indnames <- import('indnames.csv')
 
-result <- Translation.data %>%
-  filter(IND >= 4760 & IND <= 5790, EMPSTAT == 10) %>%
-  group_by(YEAR, MONTH) %>%
-  summarize(employed.retail = n()) %>%
-  ungroup() %>%
-  mutate(total.employed = Translation.data %>%
-           filter(EMPSTAT == 10) %>%
-           count(YEAR, MONTH) %>%
-           pull(n),
-         percentage = employed.retail / total.employed * 100)
+# Rename the IND column in Translation.data to ind so that we can join them, using names()[].
+names(Translation.data)[20] <- "ind"
 
-# View the result
-print(result)
+# Join Translation.data with indnames using the 'ind' column.
+Translation.data <- 
+  inner_join(Translation.data, indnames, by = "ind")
+```
 
+```{r}
+# Join year and month columns together and format as date.
+Translation.data <- Translation.data %>% mutate(Date.year.month = ym(paste0(YEAR, '/',MONTH)))
+
+# Add a Cutoff Variable at 3.11.20 to indicate the WHO recognition of COVId as a global pandemic. # need to edit. 
+Translation.data <- Translation.data %>% mutate(covid.pre.post = case_when(
+  Date.year.month <= ym('2020/03') ~ "Before",
+  Date.year.month > ym('2020/03') ~ "After"
+))
+
+# Create character variable for employment. Employed = EMPSTAT == 10 | Unemployed = EMPSTAT == 21
+Translation.data <- Translation.data %>% mutate(Employment.Status = case_when(
+  EMPSTAT == 10 ~ "EMPLOYED",
+  EMPSTAT == 21 ~ "UNEMPLOYED"
+))
+
+# Create binary variable for employment. Employed = EMPSTAT == 10 | Unemployed = EMPSTAT == 21
+Translation.data <- Translation.data %>% mutate(Employment.Status.numeric = case_when(
+  EMPSTAT == 10 ~ 1,
+  EMPSTAT == 21 ~ 0
+))
+
+# Create a character variable for retail trade employee. Retail Employee = indname == 'Retail Trade' 
+Translation.data <- Translation.data %>% mutate(Retail.Trade.Employee = case_when(
+  indname == 'Retail Trade' ~ "TRUE",
+  TRUE ~ "FALSE"
+))
+
+# Create new data frame with only individuals employed in retail
+Retail.data <- Translation.data %>% 
+  filter(Retail.Trade.Employee == "TRUE")
+```
+
+```{r}
+# Visual for number of retail employees per month.
+# Create data set that contains only Retail data: in "Retail Trade" and EMPSTAT == 10 and 21
+Retail.data.visual <- Translation.data %>% filter(indname == "Retail Trade" & EMPSTAT %in% c(10, 21))
+
+# Create a new column that contains a varible that counts the number of retail employees, per month. 
+Retail.data.visual <- Retail.data.visual %>% group_by(Date.year.month) %>%
+  mutate(count.EMPSTAT.10 = sum(EMPSTAT == 10),
+         count.EMPSTAT.21 = sum(EMPSTAT == 21),
+         )
+# Clean so that there is only one obeervation per month.
+Retail.data.visual <- Retail.data.visual %>% distinct(Date.year.month, covid.pre.post, .keep_all = TRUE)
+
+# Graph data
+Plot.point.1 <- ggplot(Retail.data.visual, aes(x = Date.year.month, y = count.EMPSTAT.10)) +
+  geom_point(color = "blue") +
+  geom_vline(xintercept = ym('2020/03'), color = "orange", linetype = "dashed") +
+  theme_minimal() +
+  labs(title = 'Employment in Retail Trade from 2019-2022', x = 'Date', y = 'Count of Retail Trade Employees')
+Plot.point.1
+```
+
+```{r}
+# Regression Model
+Q1.reg <- Retail.data %>% feols(Employment.Status.numeric ~ covid.pre.post == 'After')
+etable(Q1.reg)
+```
+
+# 2)
+
+```{r}
 
 ```
 
 ```{r}
-# All industries as a percentage of total employed people. 
+# Visual for number of employees per month, by industry. 
+# data set containing EMPSTAT == c(10,21) for all categories
+industry.data <- Translation.data %>% filter(EMPSTAT %in% c(10, 21))
 
-result <- Translation.data %>%
-  filter(EMPSTAT == 10) %>%
-  group_by(YEAR, MONTH) %>%
-  summarize(
-    employed.retail = sum(IND >= 4760 & IND <= 5790),
-    employed.agriculture = sum(IND >= 0170 & IND <= 0290),
-    employed.mining = sum(IND >= 0370 & IND <= 0490),
-    employed.construction = sum(IND >= 0370 & IND <= 0490),
-    employed.manufacturing = sum(IND >= 1070 & IND <= 3990),
-    employed.finance.insurance = sum(IND >= 6870 & IND <= 6992),
-    employed.RE.rental = sum(IND >= 7071 & IND <= 7490),
-    employed.science.technical.professional = sum(IND >= 7270 & IND <= 7490),
-    employed.management = sum(IND >= 7570),
-    employed.admin.waste = sum(IND >= 7580 & IND <= 7790),
-    employed.education = sum(IND >= 7860 & IND <= 7890),
-    employed.health.social = sum(IND >= 7970 & IND <= 8470),
-    employed.entertainment = sum(IND >= 8561 & IND <= 8590),
-    employed.foodserve = sum(IND >= 8660 & IND <= 8690),
-    employed.other = sum(IND >= 8770 & IND <= 9290),
-    employed.publicadmin = sum(IND >= 9370 & IND <= 9590),
-    employed.military = sum(IND >= 9670 & IND <= 9870),
-    employed.unemployed = sum(IND >= 9920),
-    total.employed = n()) %>%
-mutate(
-    percentage.retail = employed.retail / total.employed * 100,
-    percentage.agriculture = employed.agriculture / total.employed * 100,
-    percentage.mining = employed.mining / total.employed * 100,
-    percentage.construction = employed.construction / total.employed * 100,
-    percentage.manufacturing = employed.manufacturing / total.employed * 100,
-    percentage.finance.insurance = employed.finance.insurance / total.employed * 100,
-    percentage.RE.rental = employed.RE.rental / total.employed * 100,
-    percentage.science.technical.professional = employed.science.technical.professional / total.employed * 100,
-    percentage.management = employed.management / total.employed * 100,
-    percentage.admin.waste = employed.admin.waste / total.employed * 100,
-    percentage.education = employed.education / total.employed * 100,
-    percentage.health.social = employed.health.social/ total.employed * 100,
-    percentage.entertainment = employed.entertainment / total.employed * 100,
-    percentage.foodserve = employed.foodserve / total.employed * 100,
-    percentage.other = employed.other / total.employed * 100,
-    percentage.publicadmin =employed.publicadmin / total.employed * 100,
-    percentage.military = employed.military / total.employed * 100,
-    percentage.unemployed = employed.unemployed / total.employed * 100
-    )
+industry.data <- industry.data %>% group_by(Date.year.month, indname) %>%
+  mutate(count.EMPSTAT.10 = sum(EMPSTAT == 10),
+         count.EMPSTAT.21 = sum(EMPSTAT == 21),
+         )
 
-# Print the result
-print(result)
+industry.data <- industry.data %>% distinct(Date.year.month, covid.pre.post, .keep_all = TRUE)
+
+# Graph data
+Plot.point.2 <- ggplot(industry.data, aes(x = Date.year.month, y = count.EMPSTAT.10, color = indname)) +
+  geom_point() +
+  geom_vline(xintercept = ym('2020/03'), color = "orange", linetype = "dashed") +
+  theme_minimal() +
+  labs(title = 'Employment from 2019-2022', x = 'Date', y = 'Count of Employees')
+Plot.point.2
 ```
 
-```{r}
-# Mutate Data: add a Cutoff Variable at 3.11.20 to indicate the WHO recognition of COVId as a global pandemic.
-
-
-```
+# 3) 
