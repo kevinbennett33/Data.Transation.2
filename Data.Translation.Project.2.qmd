@@ -106,7 +106,7 @@ Plot.point.1
 
 ```{r}
 # Regression Model
-Q1.reg <- Retail.data %>% feols(Employment.Status.numeric ~ covid.pre.post == 'After')
+Q1.reg <- Retail.data %>% feols(Employment.Status.numeric ~ i(covid.pre.post, ref = 'Before'))
 etable(Q1.reg)
 ```
 
@@ -114,22 +114,25 @@ etable(Q1.reg)
 
 ```{r}
 
+Q2.reg <- Translation.data %>% feols(Employment.Status.numeric ~ i(covid.pre.post, ref = 'After')*Retail.Trade.Employee)
+
+etable(Q2.reg)
 ```
 
 ```{r}
 # Visual for number of employees per month, by industry. 
 # data set containing EMPSTAT == c(10,21) for all categories
-industry.data <- Translation.data %>% filter(EMPSTAT %in% c(10, 21))
+Industry.data.visual <- Translation.data %>% filter(EMPSTAT %in% c(10, 21))
 
-industry.data <- industry.data %>% group_by(Date.year.month, indname) %>%
+Industry.data.visual <- Industry.data.visual %>% group_by(Date.year.month, indname) %>%
   mutate(count.EMPSTAT.10 = sum(EMPSTAT == 10),
          count.EMPSTAT.21 = sum(EMPSTAT == 21),
          )
 
-industry.data <- industry.data %>% distinct(Date.year.month, covid.pre.post, .keep_all = TRUE)
+Industry.data.visual <- Industry.data.visual %>% distinct(Date.year.month, covid.pre.post, .keep_all = TRUE)
 
 # Graph data
-Plot.point.2 <- ggplot(industry.data, aes(x = Date.year.month, y = count.EMPSTAT.10, color = indname)) +
+Plot.point.2 <- ggplot(Industry.data.visual, aes(x = Date.year.month, y = count.EMPSTAT.10, color = indname)) +
   geom_point() +
   geom_vline(xintercept = ym('2020/03'), color = "orange", linetype = "dashed") +
   theme_minimal() +
