@@ -106,15 +106,18 @@ Plot.point.1
 
 ```{r}
 # Regression Model
-Q1.reg <- Retail.data %>% feols(Employment.Status.numeric ~ i(covid.pre.post, ref = 'Before'))
+Q1.reg <- Retail.data %>% feols(Employment.Status.numeric ~ covid.pre.post == 'After')
+
 etable(Q1.reg)
 ```
 
 # 2)
 
 ```{r}
+# edit: I want fixed effects for indname (fixed effects for group).
 
-Q2.reg <- Translation.data %>% feols(Employment.Status.numeric ~ i(covid.pre.post, ref = 'After')*Retail.Trade.Employee)
+Q2.reg <- Translation.data %>% 
+  feols(Employment.Status.numeric ~ i(covid.pre.post, Retail.Trade.Employee, ref = 'Before'))
 
 etable(Q2.reg)
 ```
@@ -141,3 +144,7 @@ Plot.point.2
 ```
 
 # 3) 
+
+```{r}
+
+```
