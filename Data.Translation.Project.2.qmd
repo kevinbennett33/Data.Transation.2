@@ -59,6 +59,10 @@ Translation.data <- Translation.data %>% mutate(covid.pre.post = case_when(
   Date.year.month > ym('2020/03') ~ "After"
 ))
 
+# Create a variable that is centered around Date.year.month == "2020 03)
+Translation.data <- Translation.data %>%
+  mutate(Center.Date = Date.year.month - as.Date("2020-03-01"))
+
 # Create character variable for employment. Employed = EMPSTAT == 10 | Unemployed = EMPSTAT == 21
 Translation.data <- Translation.data %>% mutate(Employment.Status = case_when(
   EMPSTAT == 10 ~ "EMPLOYED",
@@ -108,7 +112,10 @@ Plot.point.1
 ```{r}
 # Regression Model
 #RDD desired here.
-Q1.reg <- Retail.data %>% feols(Employment.Status.numeric ~ covid.pre.post == 'After')
+Q1.reg <- Retail.data %>% feols(Employment.Status.numeric ~ (covid.pre.post == 'After')*Center.Date) 
+
+Q1.reg2 <- Translation.data %>%
+feols(Employment.Status.numeric ~ covid.pre.post*I(indname == 'Retail Trade')*Center.Date)
 
 etable(Q1.reg)
 ```
@@ -120,12 +127,25 @@ etable(Q1.reg)
 
  # aggregrate comparison
 Q2.reg <- Translation.data %>% 
-  feols(Employment.Status.numeric ~ covid.pre.post*Retail.Trade.Employee*Running.var.centered)
+  feols(Employment.Status.numeric ~ covid.pre.post*Retail.Trade.Employee*Center.Date)
+
+feols(Employment.Status.numeric ~ covid.pre.post*I(indname == 'Retail Trade')*Center.Date)
+
+indlevels = unique(Translation.data$indname)
+indlevels = c('Retail Trade', indlevels[indlevels != 'Retail Trade'])
+Translation.data <- Translation.data %>%
+  mutate(indname = factor(indname, levels = indlevels)) %>%
+  mutate(covid.pre.post = factor(covid.pre.post, levels = c('Before','After')))
 
   # Individual Comparison
+feols(Employment.Status.numeric ~ indname, Translation.data)
 
+Q2.reg2 <- Translation.data %>% 
+feols(Employment.Status.numeric ~ indname*Center.Date*covid.pre.post)
 
-etable(Q2.reg)
+# specify retail as reference group with i() 
+
+etable(Q2.reg2, keep = 'covid.pre.post')
 ```
 
 ```{r}
