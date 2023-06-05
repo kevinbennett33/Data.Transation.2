@@ -98,6 +98,7 @@ Retail.data.visual <- Retail.data.visual %>% distinct(Date.year.month, covid.pre
 # Graph data
 Plot.point.1 <- ggplot(Retail.data.visual, aes(x = Date.year.month, y = count.EMPSTAT.10)) +
   geom_point(color = "blue") +
+  geom_line() +
   geom_vline(xintercept = ym('2020/03'), color = "orange", linetype = "dashed") +
   theme_minimal() +
   labs(title = 'Employment in Retail Trade from 2019-2022', x = 'Date', y = 'Count of Retail Trade Employees')
@@ -106,6 +107,7 @@ Plot.point.1
 
 ```{r}
 # Regression Model
+#RDD desired here.
 Q1.reg <- Retail.data %>% feols(Employment.Status.numeric ~ covid.pre.post == 'After')
 
 etable(Q1.reg)
@@ -116,8 +118,12 @@ etable(Q1.reg)
 ```{r}
 # edit: I want fixed effects for indname (fixed effects for group).
 
+ # aggregrate comparison
 Q2.reg <- Translation.data %>% 
-  feols(Employment.Status.numeric ~ i(covid.pre.post, Retail.Trade.Employee, ref = 'Before'))
+  feols(Employment.Status.numeric ~ covid.pre.post*Retail.Trade.Employee*Running.var.centered)
+
+  # Individual Comparison
+
 
 etable(Q2.reg)
 ```
