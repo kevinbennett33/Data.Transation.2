@@ -96,7 +96,7 @@ Retail.data.visual <- Retail.data.visual %>% group_by(Date.year.month) %>%
   mutate(count.EMPSTAT.10 = sum(EMPSTAT == 10),
          count.EMPSTAT.21 = sum(EMPSTAT == 21),
          )
-# Clean so that there is only one obeervation per month.
+# Clean so that there is only one observation per month.
 Retail.data.visual <- Retail.data.visual %>% distinct(Date.year.month, covid.pre.post, .keep_all = TRUE)
 
 # Graph data
@@ -110,21 +110,34 @@ Plot.point.1
 ```
 
 ```{r}
-# Regression Model
-#RDD desired here.
-Q1.reg <- Retail.data %>% feols(Employment.Status.numeric ~ (covid.pre.post == 'After')*Center.Date) 
+# Q1 Regression Model: RDD with fixed effects for industry.
 
-Q1.reg2 <- Translation.data %>%
+# This model regresses Employment Status on the covid cutoff interacted with an indicator variable that takes a value of 1 if indname = Retail Trade, and 0 if not, and an interaction with the running variable, time, which has been centered around the cutoff date (2020/03).
+# The model describes the effect of the covid cutoff on Employment status for the retail industry compared to all other industries in the data set. 
+
+Q1.reg <- Translation.data %>%
 feols(Employment.Status.numeric ~ covid.pre.post*I(indname == 'Retail Trade')*Center.Date)
 
+Q1.reg2 <- Translation.data %>%
+  filter(indname == 'Retail Trade') %>%
+  feols(Employment.Status.numeric ~ covid.pre.post * Center.Date)
+
+
 etable(Q1.reg)
+etable(Q1.reg2)
+```
+
+```{r}
+# The interaction term "covid.pre.postAfter x I(indname=="RetailTrade")TRUE" does not have a statistically significant effect at conventional levels (p > 0.05). This suggests that there is no strong evidence to support a differential effect of the post-COVID-19 period specifically for the "Retail Trade" industry compared to other industries. In other words, the impact of the post-COVID-19 period on the dependent variable is not significantly different between the "Retail Trade" industry and the other industries included in the analysis.
+
+# The coefficient for "covid.pre.postAfter x I(indname=="RetailTrade")TRUE" (-0.0012, not statistically significant) suggests that there is no strong evidence to support a differential effect of the post-COVID-19 period specifically for the "Retail Trade" industry compared to the reference category. In other words, the impact of the post-COVID-19 period on the dependent variable does not significantly vary between the "Retail Trade" industry and other industries.
+
+# sIn summary, the "I(indname =="RetailTrade")TRUE" coefficient represents the baseline effect of the "Retail Trade" industry compared to the reference category, while the "covid.pre.postAfter x I(indname=="RetailTrade")TRUE" coefficient captures the additional differential effect of the post-COVID-19 period specifically for the "Retail Trade" industry.
 ```
 
 # 2)
 
-```{r}
-# edit: I want fixed effects for indname (fixed effects for group).
-
+```{r}.}
  # aggregrate comparison
 Q2.reg <- Translation.data %>% 
   feols(Employment.Status.numeric ~ covid.pre.post*Retail.Trade.Employee*Center.Date)
@@ -163,6 +176,7 @@ Industry.data.visual <- Industry.data.visual %>% distinct(Date.year.month, covid
 # Graph data
 Plot.point.2 <- ggplot(Industry.data.visual, aes(x = Date.year.month, y = count.EMPSTAT.10, color = indname)) +
   geom_point() +
+  geom_line() +
   geom_vline(xintercept = ym('2020/03'), color = "orange", linetype = "dashed") +
   theme_minimal() +
   labs(title = 'Employment from 2019-2022', x = 'Date', y = 'Count of Employees')
