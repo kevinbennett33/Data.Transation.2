@@ -17,6 +17,8 @@ library(rio)
 library(ipumsr)
 ```
 
+# Load, Clean, and Mutate Data for Analysis
+
 ```{r}
 # Load Data
 ddi <- read_ipums_ddi("cps_00002.xml")
@@ -34,8 +36,6 @@ Translation.data <- Translation.data %>% filter(is.na(ASECFLAG))
 Translation.data <- Translation.data %>% filter(EMPSTAT %in% c(10, 21))
 ```
 
-# 1) How has COVID affected the health of the retail Industry, as measured by employment?
-
 ```{r}
 # Join indnames.csv and the Translation.data df
 # Read in indnames.csv
@@ -52,17 +52,23 @@ Translation.data <-
 ```{r}
 # Join year and month columns together and format as date.
 Translation.data <- Translation.data %>% mutate(Date.year.month = ym(paste0(YEAR, '/',MONTH)))
+```
 
+```{r}
 # Add a Cutoff Variable at 3.11.20 to indicate the WHO recognition of COVId as a global pandemic. # need to edit. 
 Translation.data <- Translation.data %>% mutate(covid.pre.post = case_when(
   Date.year.month <= ym('2020/03') ~ "Before",
   Date.year.month > ym('2020/03') ~ "After"
 ))
+```
 
+```{r}
 # Create a variable that is centered around Date.year.month == "2020 03)
 Translation.data <- Translation.data %>%
   mutate(Center.Date = Date.year.month - as.Date("2020-03-01"))
+```
 
+```{r}
 # Create character variable for employment. Employed = EMPSTAT == 10 | Unemployed = EMPSTAT == 21
 Translation.data <- Translation.data %>% mutate(Employment.Status = case_when(
   EMPSTAT == 10 ~ "EMPLOYED",
@@ -74,7 +80,11 @@ Translation.data <- Translation.data %>% mutate(Employment.Status.numeric = case
   EMPSTAT == 10 ~ 1,
   EMPSTAT == 21 ~ 0
 ))
+```
 
+# 1) How has COVID affected the health of the retail Industry, as measured by employment?
+
+```{r}
 # Create a character variable for retail trade employee. Retail Employee = indname == 'Retail Trade' 
 Translation.data <- Translation.data %>% mutate(Retail.Trade.Employee = case_when(
   indname == 'Retail Trade' ~ "TRUE",
@@ -89,24 +99,28 @@ Retail.data <- Translation.data %>%
 ```{r}
 # Visual for number of retail employees per month.
 # Create data set that contains only Retail data: in "Retail Trade" and EMPSTAT == 10 and 21
-Retail.data.visual <- Translation.data %>% filter(indname == "Retail Trade" & EMPSTAT %in% c(10, 21))
+Retail.df <- Translation.data %>% filter(indname == "Retail Trade" & EMPSTAT %in% c(10, 21))
 
 # Create a new column that contains a varible that counts the number of retail employees, per month. 
-Retail.data.visual <- Retail.data.visual %>% group_by(Date.year.month) %>%
+Retail.df <- Retail.df %>% group_by(Date.year.month) %>%
   mutate(count.EMPSTAT.10 = sum(EMPSTAT == 10),
          count.EMPSTAT.21 = sum(EMPSTAT == 21),
          )
+
 # Clean so that there is only one observation per month.
-Retail.data.visual <- Retail.data.visual %>% distinct(Date.year.month, covid.pre.post, .keep_all = TRUE)
+Retail.df <- Retail.df %>% distinct(Date.year.month, covid.pre.post, .keep_all = TRUE)
 
 # Graph data
-Plot.point.1 <- ggplot(Retail.data.visual, aes(x = Date.year.month, y = count.EMPSTAT.10)) +
+Retail.visual <- ggplot(Retail.df, aes(x = Date.year.month, y = count.EMPSTAT.10)) +
   geom_point(color = "blue") +
   geom_line() +
   geom_vline(xintercept = ym('2020/03'), color = "orange", linetype = "dashed") +
   theme_minimal() +
-  labs(title = 'Employment in Retail Trade from 2019-2022', x = 'Date', y = 'Count of Retail Trade Employees')
-Plot.point.1
+  labs(title = 'Employment in Retail Trade from 2019-2022, Monthly', x = 'Date', y = 'Count of Retail Trade Employees')
+```
+
+```{r}
+Retail.visual
 ```
 
 ```{r}
@@ -115,26 +129,34 @@ Plot.point.1
 # This model regresses Employment Status on the covid cutoff interacted with an indicator variable that takes a value of 1 if indname = Retail Trade, and 0 if not, and an interaction with the running variable, time, which has been centered around the cutoff date (2020/03).
 # The model describes the effect of the covid cutoff on Employment status for the retail industry compared to all other industries in the data set. 
 
-# edit so that the reference is after 
+```
+
+```{r}
+# Ensure that covid.pre.post is set to reference (drop) 'Before' 
 Translation.data <- Translation.data %>%
   mutate(covid.pre.post = factor(covid.pre.post, levels = c('Before','After')))
 
-Q1.reg <- Translation.data %>%
+Q1.Retail.reg1 <- Translation.data %>%
 feols(Employment.Status.numeric ~ covid.pre.post*I(indname == 'Retail Trade')*Center.Date)
 
-Q1.reg2 <- Translation.data %>%
+Q1.Retail.reg2 <- Translation.data %>%
   filter(indname == 'Retail Trade') %>%
   feols(Employment.Status.numeric ~ covid.pre.post*Center.Date)
+```
 
+```{r}
 etable(Q1.reg)
+```
+
+```{r}
 etable(Q1.reg2)
 ```
 
 ```{r}
-# Beta1 (covid.pre.post) is the RDD effect of covid.pre.post 
+# Beta1 (covid.pre.post) is the RDD effect of covid.pre.post on the Retail industry.
 ```
 
-# 2)
+# 2) How has retail fared relative to other industries? (as measured by employment)
 
 ```{r}
 # Visual for number of employees per month, by industry. 
@@ -176,13 +198,14 @@ Translation.data <- Translation.data %>%
   mutate(indname = factor(indname, levels = indlevels)) %>%
   mutate(covid.pre.post = factor(covid.pre.post, levels = c('Before','After')))
 
+# Individual Regression
 Q2.reg2 <- Translation.data %>% 
 feols(Employment.Status.numeric ~ indname*Center.Date*covid.pre.post)
 
 etable(Q2.reg2, keep = 'covid.pre.post')
 ```
 
-# 3)
+# 3) What has changed about *who* is working and earning money? (as measured by employment)
 
 ```{r}
 # Define Demogrpahics & mutate data for graphs and regression.
