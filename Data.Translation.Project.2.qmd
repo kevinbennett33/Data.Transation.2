@@ -91,8 +91,6 @@ Translation.data <- Translation.data %>% mutate(Employment.Status.numeric = case
 
 # 1) How has COVID affected the health of the retail Industry, as measured by employment?
 
-![](images/RDD.Explanation.jpg)
-
 ```{r}
 # Create a character variable for retail trade employee. Retail Employee = indname == 'Retail Trade' 
 Translation.data <- Translation.data %>% mutate(Retail.Trade.Employee = case_when(
@@ -139,7 +137,7 @@ Retail.visual
 
 # The model describes the relationship between the dependent variable, "Employment.Status.numeric," and the independent variables, "covid.pre.post" and "Center.Date," specifically for the subset of data where the industry is categorized as 'Retail Trade'.
 
-#Tthe model measures the change in retail employment status within the 'Retail Trade' industry, specifically examining how it is influenced by the shift from pre-COVID to post-COVID periods and the effect of the specified cutoff date or event.
+#The model measures the change in retail employment status within the 'Retail Trade' industry, specifically examining how it is influenced by the shift from pre-COVID to post-COVID periods and the effect of the specified cutoff date or event.
 ```
 
 ```{r}
@@ -151,7 +149,7 @@ Translation.data <- Translation.data %>%
 ```{r}
 # Retail Regression : Method 1
 Q1.Retail.reg1 <- Translation.data %>%
-feols(Employment.Status.numeric ~ covid.pre.post*I(indname == 'Retail Trade')*Center.Date)
+feols(Employment.Status.numeric ~ covid.pre.post*I(indname == 'Retail Trade')*Center.Date, weights = Translation.data$WTFINL)
 ```
 
 ```{r}
@@ -159,18 +157,7 @@ etable(Q1.reg)
 ```
 
 ```{r}
-# Retail Regression : Method 2
-Q1.Retail.reg2 <- Translation.data %>%
-  filter(indname == 'Retail Trade') %>%
-  feols(Employment.Status.numeric ~ covid.pre.post*Center.Date)
-```
-
-```{r}
-etable(Q1.reg2)
-```
-
-```{r}
-# Beta1 (covid.pre.post) is the RDD effect of covid.pre.post on the Retail industry.
+# (covid.pre.post)*RETAILTRUE is the RDD effect of covid.pre.post on the Retail industry.
 ```
 
 # 2) How has retail fared relative to other industries? (as measured by employment)
@@ -188,19 +175,22 @@ Industry.data.visual <- Industry.data.visual %>% group_by(Date.year.month, indna
 Industry.data.visual <- Industry.data.visual %>% distinct(Date.year.month, covid.pre.post, .keep_all = TRUE)
 
 # Graph data
-Plot.point.2 <- ggplot(Industry.data.visual, aes(x = Date.year.month, y = count.EMPSTAT.10, color = indname)) +
+Plot.Industry <- ggplot(Industry.data.visual, aes(x = Date.year.month, y = count.EMPSTAT.10, color = indname)) +
   geom_point() +
   geom_line() +
   geom_vline(xintercept = ym('2020/03'), color = "orange", linetype = "dashed") +
   theme_minimal() +
   labs(title = 'Employment from 2019-2022', x = 'Date', y = 'Count of Employees')
-Plot.point.2
+```
+
+```{r}
+Plot.Industry
 ```
 
 ```{r}
  # Aggregrate comparison: Beta 1 
 Q2.reg1 <- Translation.data %>% 
-  feols(Employment.Status.numeric ~ covid.pre.post*Retail.Trade.Employee*Center.Date)
+  feols(Employment.Status.numeric ~ covid.pre.post*Retail.Trade.Employee*Center.Date, weights = Translation.data$WTFINL)
 ```
 
 ```{r}
@@ -221,7 +211,7 @@ Translation.data <- Translation.data %>%
 ```{r}
 # Individual Regression
 Q2.reg2 <- Translation.data %>% 
-feols(Employment.Status.numeric ~ indname*Center.Date*covid.pre.post)
+feols(Employment.Status.numeric ~ indname*Center.Date*covid.pre.post, weights = Translation.data$WTFINL)
 ```
 
 ```{r}
@@ -271,7 +261,7 @@ Translation.data <- Translation.data %>% mutate(Marital.Status = case_when(
 ```
 
 ```{r}
-# Create df for number of people employed in each demographic, per month, to be used for visualization. 
+# Create df for number of people employed in each demographic, per month, to be used for visualization (ggplot).
 
 # Age visual
 Age.visual <- Translation.data %>% select(Generation,Date.year.month,covid.pre.post,Center.Date,Employment.Status.numeric)
@@ -326,11 +316,10 @@ Plot.Age <- ggplot(Age.visual, aes(x = Date.year.month, y = count.Employed, colo
   geom_vline(xintercept = ym('2020/03'), color = "orange", linetype = "dashed") +
   theme_minimal() +
   labs(title = 'Generational Employment from 2019-2022', x = 'Date', y = 'Count of Employees, Monthly')
-Plot.Age
 ```
 
 ```{r}
-# NOTE: I want to add a first regression, as we did in Q1 an Q2. In other words, treat each demographic regression as having 2 parts: 1) How our reference group changed. 2) How our other groups within each demographic changed in comparison to our reference group.
+Plot.Age
 ```
 
 ```{r}
@@ -344,8 +333,10 @@ Translation.data <- Translation.data %>%
   mutate(covid.pre.post = factor(covid.pre.post, levels = c('Before','After')))
 
 Q3.Age.reg <- Translation.data %>% 
-feols(Employment.Status.numeric ~ Generation*Center.Date*covid.pre.post)
+feols(Employment.Status.numeric ~ Generation*Center.Date*covid.pre.post, weights = Translation.data$WTFINL)
+```
 
+```{r}
 etable(Q3.Age.reg, keep = 'covid.pre.post')
 ```
 
@@ -357,6 +348,9 @@ Plot.Sex <- ggplot(Sex.visual, aes(x = Date.year.month, y = count.Employed, colo
   geom_vline(xintercept = ym('2020/03'), color = "orange", linetype = "dashed") +
   theme_minimal() +
   labs(title = 'Sex Employment from 2019-2022', x = 'Date', y = 'Count of Employees, Monthly')
+```
+
+```{r}
 Plot.Sex
 ```
 
@@ -370,10 +364,11 @@ Translation.data <- Translation.data %>%
   mutate(covid.pre.post = factor(covid.pre.post, levels = c('Before', 'After')))
 
 Q3.Sex.reg <- Translation.data %>%
-  feols(Employment.Status.numeric ~ Sex * Center.Date * covid.pre.post)
+  feols(Employment.Status.numeric ~ Sex * Center.Date * covid.pre.post, weights = Translation.data$WTFINL)
+```
 
+```{r}
 etable(Q3.Sex.reg, keep = 'covid.pre.post')
-
 ```
 
 ```{r}
@@ -384,6 +379,9 @@ Plot.Race <- ggplot(Race.visual, aes(x = Date.year.month, y = count.Employed, co
   geom_vline(xintercept = ym('2020/03'), color = "orange", linetype = "dashed") +
   theme_minimal() +
   labs(title = 'Race Employment from 2019-2022', x = 'Date', y = 'Count of Employees, Monthly')
+```
+
+```{r}
 Plot.Race
 ```
 
@@ -397,8 +395,10 @@ Translation.data <- Translation.data %>%
   mutate(covid.pre.post = factor(covid.pre.post, levels = c('Before', 'After')))
 
 Q3.Race.reg <- Translation.data %>%
-  feols(Employment.Status.numeric ~ Race * Center.Date * covid.pre.post)
+  feols(Employment.Status.numeric ~ Race * Center.Date * covid.pre.post, weights = Translation.data$WTFINL)
+```
 
+```{r}
 etable(Q3.Race.reg, keep = 'covid.pre.post')
 ```
 
@@ -410,6 +410,9 @@ Plot.Marital <- ggplot(Marital.visual, aes(x = Date.year.month, y = count.Employ
   geom_vline(xintercept = ym('2020/03'), color = "orange", linetype = "dashed") +
   theme_minimal() +
   labs(title = 'Marital Employment from 2019-2022', x = 'Date', y = 'Count of Employees, Monthly')
+```
+
+```{r}
 Plot.Marital
 ```
 
@@ -423,7 +426,9 @@ Translation.data <- Translation.data %>%
   mutate(covid.pre.post = factor(covid.pre.post, levels = c('Before', 'After')))
 
 Q3.Marital.reg <- Translation.data %>%
-  feols(Employment.Status.numeric ~ Marital.Status * Center.Date * covid.pre.post)
+  feols(Employment.Status.numeric ~ Marital.Status * Center.Date * covid.pre.post, weights = Translation.data$WTFINL)
+```
 
+```{r}
 etable(Q3.Marital.reg, keep = 'covid.pre.post')
 ```
