@@ -91,6 +91,8 @@ Translation.data <- Translation.data %>% mutate(Employment.Status.numeric = case
 
 # 1) How has COVID affected the health of the retail Industry, as measured by employment?
 
+![](images/RDD.Explanation.jpg)
+
 ```{r}
 # Create a character variable for retail trade employee. Retail Employee = indname == 'Retail Trade' 
 Translation.data <- Translation.data %>% mutate(Retail.Trade.Employee = case_when(
@@ -134,25 +136,33 @@ Retail.visual
 # Q1 Regression Model
 
 # This model regresses Employment Status on the covid cutoff interacted with an indicator variable that takes a value of 1 if indname = Retail Trade, and 0 if not, and an interaction with the running variable, time, which has been centered around the cutoff date (2020/03).
-# The model describes the effect of the covid cutoff on Employment status for the retail industry compared to all other industries in the data set. 
 
+# The model describes the relationship between the dependent variable, "Employment.Status.numeric," and the independent variables, "covid.pre.post" and "Center.Date," specifically for the subset of data where the industry is categorized as 'Retail Trade'.
+
+#Tthe model measures the change in retail employment status within the 'Retail Trade' industry, specifically examining how it is influenced by the shift from pre-COVID to post-COVID periods and the effect of the specified cutoff date or event.
 ```
 
 ```{r}
 # Ensure that covid.pre.post is set to reference (drop) 'Before' 
 Translation.data <- Translation.data %>%
   mutate(covid.pre.post = factor(covid.pre.post, levels = c('Before','After')))
+```
 
+```{r}
+# Retail Regression : Method 1
 Q1.Retail.reg1 <- Translation.data %>%
 feols(Employment.Status.numeric ~ covid.pre.post*I(indname == 'Retail Trade')*Center.Date)
-
-Q1.Retail.reg2 <- Translation.data %>%
-  filter(indname == 'Retail Trade') %>%
-  feols(Employment.Status.numeric ~ covid.pre.post*Center.Date)
 ```
 
 ```{r}
 etable(Q1.reg)
+```
+
+```{r}
+# Retail Regression : Method 2
+Q1.Retail.reg2 <- Translation.data %>%
+  filter(indname == 'Retail Trade') %>%
+  feols(Employment.Status.numeric ~ covid.pre.post*Center.Date)
 ```
 
 ```{r}
@@ -191,8 +201,10 @@ Plot.point.2
  # Aggregrate comparison: Beta 1 
 Q2.reg1 <- Translation.data %>% 
   feols(Employment.Status.numeric ~ covid.pre.post*Retail.Trade.Employee*Center.Date)
+```
 
-Q2.reg1
+```{r}
+etable(Q2.reg1)
 ```
 
 ```{r}
@@ -204,11 +216,15 @@ indlevels = c('Retail Trade', indlevels[indlevels != 'Retail Trade'])
 Translation.data <- Translation.data %>%
   mutate(indname = factor(indname, levels = indlevels)) %>%
   mutate(covid.pre.post = factor(covid.pre.post, levels = c('Before','After')))
+```
 
+```{r}
 # Individual Regression
 Q2.reg2 <- Translation.data %>% 
 feols(Employment.Status.numeric ~ indname*Center.Date*covid.pre.post)
+```
 
+```{r}
 etable(Q2.reg2, keep = 'covid.pre.post')
 ```
 
@@ -410,37 +426,4 @@ Q3.Marital.reg <- Translation.data %>%
   feols(Employment.Status.numeric ~ Marital.Status * Center.Date * covid.pre.post)
 
 etable(Q3.Marital.reg, keep = 'covid.pre.post')
-
 ```
-
-# Write-up
-
-Format the writeup as a report with sections for the main questions, not a list of bullet points.
-
-Information to include:
-
-1.  Why you are running the analyses you are running.
-
-2.  How the analyses answer the question being asked, and what the result is.
-
-3.  Carefully interpreting the results.
-
-4.  Presenting the results in an appealing way. Graphs are great, `sumtable()` is great, `etable()` is great - put a little effort into formatting tables and figures to make them look nice! At the very least, variable names should be in English rather than statistics-package (\'Education\' not \'EDUC\'). If you aren\'t comfortable enough with `ggplot` to make its visualizations look nice, feel free to make graphics in Excel or Tableau or anything you like, and include them in your RMarkdown doc as images. Econometric analyses should be in R.
-
-5.  Acknowledging the assumptions you are making in each analysis, how plausible those assumptions are in the context of your data, and any evidence you can provide backing up those assumptions.
-
-6.  After doing all analyses related to a given question, provide a generalized answer to the main questions.
-
-# Presentation
-
-Your group presentation should be between 15 and 20 minutes long, plus a few minutes for questions. As many or as few of the people in your group can present as you like. There are no bonus points for being a presenter. 20 minutes is a *maximum* length.
-
-For your presentation:
-
-1.  Choose two of the main questions you feel you can answer best
-
-2.  Present your analyses related to those questions. Depending on how many you have you may want to select only a subset of them.
-
-3.  Make clear to the audience how your analysis works, how to interpret the results, and what the general answer to the question is
-
-4.  Be prepared to answer questions about your analyses and the assumptions behind them
