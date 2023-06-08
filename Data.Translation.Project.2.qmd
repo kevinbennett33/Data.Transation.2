@@ -205,8 +205,7 @@ feols(Employment.Status.numeric ~ indname*Center.Date*covid.pre.post, weights = 
 ```
 
 ```{r}
-etable(Q2.reg2, keep = 'covid.pre.post')
-rm(Q2.reg2)
+etable(Q2.reg, keep = 'covid.pre.post')
 ```
 
 # 3) What has changed about *who* is working and earning money? (as measured by employment)
@@ -324,7 +323,7 @@ Translation.data <- Translation.data %>%
   mutate(covid.pre.post = factor(covid.pre.post, levels = c('Before','After')))
 
 Q3.Age.reg <- Translation.data %>% 
-feols(Employment.Status.numeric ~ Generation*Center.Date*covid.pre.post, weights = Translation.data$WTFINL)
+feols(Employment.Status.numeric ~ Generation*Center.Date*covid.pre.post, weights = Translation.data$WTFINL, vcov = ~Generation)
 ```
 
 ```{r}
@@ -355,7 +354,7 @@ Translation.data <- Translation.data %>%
   mutate(covid.pre.post = factor(covid.pre.post, levels = c('Before', 'After')))
 
 Q3.Sex.reg <- Translation.data %>%
-  feols(Employment.Status.numeric ~ Sex * Center.Date * covid.pre.post, weights = Translation.data$WTFINL)
+  feols(Employment.Status.numeric ~ Sex * Center.Date * covid.pre.post, weights = Translation.data$WTFINL, vcov = ~Sex)
 ```
 
 ```{r}
@@ -386,7 +385,7 @@ Translation.data <- Translation.data %>%
   mutate(covid.pre.post = factor(covid.pre.post, levels = c('Before', 'After')))
 
 Q3.Race.reg <- Translation.data %>%
-  feols(Employment.Status.numeric ~ Race * Center.Date * covid.pre.post, weights = Translation.data$WTFINL)
+  feols(Employment.Status.numeric ~ Race * Center.Date * covid.pre.post, weights = Translation.data$WTFINL, vcov = ~Race)
 ```
 
 ```{r}
@@ -417,7 +416,7 @@ Translation.data <- Translation.data %>%
   mutate(covid.pre.post = factor(covid.pre.post, levels = c('Before', 'After')))
 
 Q3.Marital.reg <- Translation.data %>%
-  feols(Employment.Status.numeric ~ Marital.Status * Center.Date * covid.pre.post, weights = Translation.data$WTFINL)
+  feols(Employment.Status.numeric ~ Marital.Status * Center.Date * covid.pre.post, weights = Translation.data$WTFINL, vcov = ~Marital.Status)
 ```
 
 ```{r}
