@@ -148,12 +148,12 @@ Translation.data <- Translation.data %>%
 
 ```{r}
 # Retail Regression : Method 1
-Q1.Retail.reg1 <- Translation.data %>%
-feols(Employment.Status.numeric ~ covid.pre.post*I(indname == 'Retail Trade')*Center.Date, weights = Translation.data$WTFINL)
+Q1.Retail.reg <- Translation.data %>%
+feols(Employment.Status.numeric ~ covid.pre.post*I(indname == 'Retail Trade')*Center.Date, weights = Translation.data$WTFINL, vcov = ~ indname)
 ```
 
 ```{r}
-etable(Q1.reg)
+etable(Q1.Retail.reg)
 ```
 
 ```{r}
@@ -188,16 +188,6 @@ Plot.Industry
 ```
 
 ```{r}
- # Aggregrate comparison: Beta 1 
-Q2.reg1 <- Translation.data %>% 
-  feols(Employment.Status.numeric ~ covid.pre.post*Retail.Trade.Employee*Center.Date, weights = Translation.data$WTFINL)
-```
-
-```{r}
-etable(Q2.reg1)
-```
-
-```{r}
 # Individual Comparison: Coefficients on the (covid.pre.post*indname) represent the change in employment share, by industry, relative to the change in retail employment share. 
 
   # Modify code so that retail will be dropped as the reference group for Q2.reg2.
@@ -210,12 +200,13 @@ Translation.data <- Translation.data %>%
 
 ```{r}
 # Individual Regression
-Q2.reg2 <- Translation.data %>% 
-feols(Employment.Status.numeric ~ indname*Center.Date*covid.pre.post, weights = Translation.data$WTFINL)
+Q2.reg <- Translation.data %>% 
+feols(Employment.Status.numeric ~ indname*Center.Date*covid.pre.post, weights = Translation.data$WTFINL, vcov = ~indname)
 ```
 
 ```{r}
 etable(Q2.reg2, keep = 'covid.pre.post')
+rm(Q2.reg2)
 ```
 
 # 3) What has changed about *who* is working and earning money? (as measured by employment)
